@@ -10,3 +10,13 @@ git commit -m "Any message here"
 
 git push
 
+
+### Helpfull Links
+
+###### Wiki Page
+
+https://en.wikipedia.org/wiki/Ext2
+
+###### Some Random Professors Slides
+
+https://perl.plover.com/classes/ext2fs/
