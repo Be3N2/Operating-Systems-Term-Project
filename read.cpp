@@ -11,7 +11,8 @@ int main () {
   int sum = 0;
   FILE *fp=fopen("header.data","rb");
   while ( fread(bytes, 4, 1,fp) != 0) {
-      sum += bytes[0] + (bytes[1]<<8) + (bytes[2]<<16) + (bytes[3]<<24);
+  		//Big Endian conversion from bytes to int
+    	sum += bytes[0] + (bytes[1]<<8) + (bytes[2]<<16) + (bytes[3]<<24);
   }
   cout << sum << endl;
 
