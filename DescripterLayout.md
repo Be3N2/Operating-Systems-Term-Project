@@ -1,9 +1,35 @@
 # Header Descriptor Layout 
 ## In Little Endian
 
+struct headerDescriptor {
+	byte preheader[72];
+	byte name[48];
+	float versionNum;
+	unsigned int sizeOfHeader;
+	int imageType;
+	int imageFlags;
+	byte imageDescription[32];
+	int offsetBlocks;
+	int offsetData;
+	unsigned int numOfCylinders;
+	unsigned int numOfHeads;
+	unsigned int numOfSectors;
+	unsigned int sectorSize;
+	//4 byte unused
+	long long int diskSize;
+	unsigned int blockSize;
+	unsigned int numOfBlocksInHDD;
+	unsigned int numOfBlocksAllocated;
+	byte UUID[16];
+	byte UUIDLastSnap[16];
+	byte UUIDLink[16];
+	byte Parent[16];
+	//read garbage until next MB
+};
+- 72 Byte pre header
 - 48 Bytes Sun xVM VirtualBox Disk Image
 - 4 Version #
-- 4 Header
+- 4 Size of Header
 - 4 Image Type (Dynamic VDI)
 - 4 Image Flags
 - 32 Image Descritption
