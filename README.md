@@ -20,3 +20,7 @@ https://en.wikipedia.org/wiki/Ext2
 ###### Some Random Professors Slides
 
 https://perl.plover.com/classes/ext2fs/
+
+##### VDI File Link
+
+https://forums.virtualbox.org/viewtopic.php?t=8046
