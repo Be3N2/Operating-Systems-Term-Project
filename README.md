@@ -24,3 +24,6 @@ https://perl.plover.com/classes/ext2fs/
 ##### VDI File Link
 
 https://forums.virtualbox.org/viewtopic.php?t=8046
+
+##### how read() works
+http://pubs.opengroup.org/onlinepubs/000095399/functions/read.html
