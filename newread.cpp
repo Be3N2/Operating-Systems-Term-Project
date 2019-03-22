@@ -52,8 +52,15 @@ struct secondDescriptor {
 #pragma pack(pop)
 
 headerDescriptor descriptor1;
+headerDescriptor& ref = descriptor1;
+secondDescriptor descriptor2;
+secondDescriptor& refToDescriptor2 = descriptor2;
 
-void readHeaderDescriptor(int fd, headerDescriptor hd);
+void readHeaderDescriptor(int fd, headerDescriptor &hd);
+//open
+//read
+//seek
+//close
 
 int main(int argc, char *argv[])
 {
@@ -88,76 +95,26 @@ int main(int argc, char *argv[])
            to be closed. Closing a file can be achieved using
            close() function. */
 
-        readHeaderDescriptor(fd, descriptor1);
+        //readHeaderDescriptor(fd, descriptor1);
+        readHeaderDescriptor(fd, ref);
+
     }
 
     return 0;
 }
 
-//https://stackoverflow.com/questions/32717269/how-to-read-an-integer-and-a-char-with-read-function-in-c
-void readHeaderDescriptor(int fd, headerDescriptor hd) {
-    char test[1000];
-    if (read(fd, test, sizeof(test)) < 0) 
-        cout << "Error in the read" << endl;
-
+//C:\Users\2017W\Documents\compSci\Operating-Systems-Term-Project\VDITestFiles\Good\Test-fixed-1k.vdi
+void readHeaderDescriptor(int fd, headerDescriptor &hd){
+    if (read(fd, &hd, sizeof(hd)) < 0)
+        cout << "ERROR"<< endl;
+  
     for (int i = 0; i < sizeof(hd.preheader); i++) {
-        hd.preheader[i] = test[i];
         cout << hd.preheader[i];
     }
-
-    cout << endl;
-
-    for (int i = 0; i < sizeof(hd.imageSignature); i++) {
-        hd.imageSignature[i] = test[i] + sizeof(hd.preheader);
-        cout << (char)((int)hd.imageSignature[i]);
+    for (int i = 0; i < sizeof(hd.UUID); i++) {
+        cout << hd.UUID[i];
     }
-    //7c7c7c60
 
-    /*
-    read(fd, hd.preheader, sizeof(hd.preheader) );
-    read(fd, hd.name, sizeof(hd.name));
-    char intBuffer[4];
-    read(fd, intBuffer, sizeof(hd.versionNum));
-    hd.versionNum = atoi(intBuffer);
-
-    read(fd, intBuffer, sizeof(hd.sizeOfHeader));
-    hd.sizeOfHeader = atoi(intBuffer);
-
-    read(fd, intBuffer, sizeof(hd.imageType));
-    hd.imageType = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.imageFlags));
-    hd.imageFlags = atoi(intBuffer);
-    read(fd, hd.imageDescription, sizeof(hd.imageDescription));
-    read(fd, intBuffer, sizeof(hd.offsetBlocks));
-    hd.offsetBlocks = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.offsetData));
-    hd.offsetData = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.numOfCylinders));
-    hd.numOfCylinders = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.numOfHeads));
-    hd.numOfHeads = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.numOfSectors));
-    hd.numOfSectors = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.sectorSize));
-    hd.sectorSize = atoi(intBuffer);
-
-    int unused;
-    read(fd, intBuffer, sizeof(unused));
-    //long long int
-    read(fd, intBuffer, sizeof(hd.diskSize));
-    hd.diskSize = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.blockSize));
-    hd.blockSize = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.blockExtraData));
-    hd.blockExtraData = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.numOfBlocksInHDD));
-    hd.numOfBlocksInHDD = atoi(intBuffer);
-    read(fd, intBuffer, sizeof(hd.numOfBlocksAllocated));
-    hd.numOfBlocksAllocated = atoi(intBuffer);
-    read(fd, hd.UUID, sizeof(hd.UUID));
-    read(fd, hd.UUIDLastSnap, sizeof(hd.UUIDLastSnap));
-    read(fd, hd.UUIDLink, sizeof(hd.UUIDLink));
-    read(fd, hd.Parent, sizeof(hd.Parent));
-    */
-    //garbage!!!!!!!
 }
+
+//https://stackoverflow.com/questions/32717269/how-to-read-an-integer-and-a-char-with-read-function-in-c
