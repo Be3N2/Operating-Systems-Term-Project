@@ -13,13 +13,13 @@ using namespace std;
 
 //details on pack code here https://gcc.gnu.org/onlinedocs/gcc/Structure-Layout-Pragmas.html
 // __operator__ ((packed))
-#pragma pack(push, 1)
-struct headerDescriptor {
+
+struct __attribute__((packed)) headerDescriptor_s {
     char preheader[64];
     char imageSignature[4];
     float versionNum;
     unsigned int sizeOfHeader;
-    int imageType;
+    unsigned int imageType;
     int imageFlags;
     char imageDescription[32];
     int offsetBlocks;
@@ -41,15 +41,15 @@ struct headerDescriptor {
     char Parent[16];
     //read garbage until next MB
 };
-#pragma pack(pop)
+//#pragma pack(pop)
 
-#pragma pack(push, 1)
+//#pragma pack(push, 1)
 struct secondDescriptor {
-    headerDescriptor hd;
+    headerDescriptor_s hd;
     int fd;
     int cursor;
 };
-#pragma pack(pop)
+//#pragma pack(pop)
 
 
 //open Takes file name, returns pointer to second struct
@@ -62,7 +62,7 @@ void openFile(char filename[], secondDescriptor &descriptor2);
 int main(int argc, char *argv[])
 {
 
-    headerDescriptor descriptor1;
+    headerDescriptor_s descriptor1;
     secondDescriptor descriptor2;
 
     openFile(argv[1], descriptor2);
