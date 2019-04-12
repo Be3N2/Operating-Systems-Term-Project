@@ -24,10 +24,10 @@ struct headerDescriptor {
     char imageDescription[32];
     int offsetBlocks;
     int offsetData;
-    unsigned int numOfCylinders;
-    unsigned int numOfHeads;
-    unsigned int numOfSectors;
-    unsigned int sectorSize;
+    int numOfCylinders;
+    int numOfHeads;
+    int numOfSectors;
+    int sectorSize;
     //4 char unused
     int unused;
     long long int diskSize;
@@ -57,21 +57,45 @@ secondDescriptor descriptor2;
 secondDescriptor& refToDescriptor2 = descriptor2;
 
 //open Takes file name, returns pointer to second struct
-void open(string filename, secondDescriptor &refToDescriptor2);
+void openFile(char filename[], secondDescriptor &refToDescriptor2);
+//void closeFile(secondDescriptor * refToDescriptor2);
 //read
 //seek
 //close
 
 int main(int argc, char *argv[])
 {
-    open(argv[1], refToDescriptor2);
-
+    openFile(argv[1], refToDescriptor2);
+    cout << "SIZE OF " << sizeof(refToDescriptor2.hd);
+    for (int i = 0;i < sizeof(refToDescriptor2.hd.preheader); i++) {
+        cout << refToDescriptor2.hd.preheader[i];
+    }
+    for (int i = 0;i < sizeof(refToDescriptor2.hd.imageSignature); i++) {
+        cout << refToDescriptor2.hd.imageSignature[i];
+    }
+    cout << "Version num: " << refToDescriptor2.hd.versionNum << endl;
+    cout << "Size of Header: " << refToDescriptor2.hd.sizeOfHeader << endl;
+    cout << "Image Type: " << refToDescriptor2.hd.imageType << endl;
+    cout << "image Flags: " << refToDescriptor2.hd.imageFlags << endl;
+    cout << "image Description";
+    for (int i = 0;i < sizeof(refToDescriptor2.hd.imageDescription); i++) {
+        cout << refToDescriptor2.hd.imageDescription[i];
+    }
+    cout << endl << "Offset blocks: " << refToDescriptor2.hd.offsetBlocks << endl;
+    cout << "offset Data: " << refToDescriptor2.hd.offsetData << endl;
+    cout << "num of cylinders: " << refToDescriptor2.hd.numOfCylinders << endl;
+    cout << "num of heads: " << refToDescriptor2.hd.numOfHeads << endl;
+    cout << "num of sectors: " << refToDescriptor2.hd.numOfSectors << endl;
+    cout << "Disk size: " << refToDescriptor2.hd.diskSize << endl;
+    cout << "Block size: " << refToDescriptor2.hd.blockSize << endl;
+    cout << "Sector size: " << refToDescriptor2.hd.sectorSize << endl;
+    //closeFile(refToDescriptor2);
     return 0;
 }
 
 //C:\Users\2017W\Documents\compSci\Operating-Systems-Term-Project\VDITestFiles\Good\Test-fixed-1k.vdi
 
-void open(string filename, secondDescriptor &refToDescriptor2) {
+void openFile(char filename[], secondDescriptor &refToDescriptor2) {
     //file descriptor
     int fd;
 
@@ -89,9 +113,8 @@ void open(string filename, secondDescriptor &refToDescriptor2) {
         refToDescriptor2.fd = fd;
         
         //read the header descriptor
-        if (read(fd, &refToDescriptor2, sizeof(refToDescriptor2)) < 0)
+        if (read(fd, &(refToDescriptor2.hd), sizeof(refToDescriptor2.hd)) < 0)
             cout << "ERROR"<< endl;
-        refToDescriptor2.hd = refToDescriptor2;
         
         //set cursor to 0
         refToDescriptor2.cursor = 0;
@@ -101,7 +124,7 @@ void open(string filename, secondDescriptor &refToDescriptor2) {
     }
 }
 
-void close(secondDescriptor refToDescriptor2) {
+void closeFile(secondDescriptor * refToDescriptor2) {
     //could close file too
     delete refToDescriptor2;
 }
