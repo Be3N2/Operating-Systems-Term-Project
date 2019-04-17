@@ -14,24 +14,24 @@ using namespace std;
 //details on pack code here https://gcc.gnu.org/onlinedocs/gcc/Structure-Layout-Pragmas.html
 // __operator__ ((packed))
 
-struct __attribute__((packed)) headerDescriptor_s {
+struct __attribute__((packed)) headerDescriptor {
     char preheader[64];
     char imageSignature[4];
     float versionNum;
     unsigned int sizeOfHeader;
     unsigned int imageType;
     int imageFlags;
-    char imageDescription[32];
+    char imageDescription[256];//96-336
     int offsetBlocks;
     int offsetData;
     int numOfCylinders;
     int numOfHeads;
     int numOfSectors;
-    int sectorSize;
+    int sectorSize; //2 ^ 9
     //4 char unused
     int unused;
-    long long int diskSize;
-    unsigned int blockSize;
+    long long int diskSize; // 2 ^ 27
+    unsigned int blockSize; // 2 ^ 20
     int blockExtraData;
     unsigned int numOfBlocksInHDD;
     unsigned int numOfBlocksAllocated;
@@ -45,7 +45,7 @@ struct __attribute__((packed)) headerDescriptor_s {
 
 //#pragma pack(push, 1)
 struct secondDescriptor {
-    headerDescriptor_s hd;
+    headerDescriptor hd;
     int fd;
     int cursor;
 };
@@ -54,15 +54,18 @@ struct secondDescriptor {
 
 //open Takes file name, returns pointer to second struct
 void openFile(char filename[], secondDescriptor &descriptor2);
-//void closeFile(secondDescriptor * descriptor2);
+void closeFile(secondDescriptor * descriptor2);
 //read
+void read(secondDescriptor &descriptor2, int nBytes, char *buf[]);
+//two assumptions - fixed size files, never read more than 4kb
+//write
 //seek
-//close
+void seek(secondDescriptor &descriptor2, int anchor);
 
 int main(int argc, char *argv[])
 {
 
-    headerDescriptor_s descriptor1;
+    headerDescriptor descriptor1;
     secondDescriptor descriptor2;
 
     openFile(argv[1], descriptor2);
@@ -127,6 +130,39 @@ void openFile(char filename[], secondDescriptor &descriptor2) {
 void closeFile(secondDescriptor * descriptor2) {
     //could close file too
     delete descriptor2;
+}
+
+void seek(secondDescriptor &descriptor2, int anchor) {
+    if (anchor == 0) {
+        //seek start
+        descriptor2.cursor = descriptor2.hd.offsetBlocks;
+    } else if (anchor == -1) {
+        //seek end
+        descriptor2.cursor = descriptor2.hd.offsetBlocks + descriptor2.hd.offsetBlocks;
+        //hopefully negative
+        if (descriptor2.cursor > 0 && descriptor2.cursor < descriptor2.hd.diskSize) {
+            //return cursor?
+        }
+    } else {
+        //seek to offset
+        descriptor2.cursor = descriptor2.hd.offsetBlocks + anchor;
+    }
+}
+
+void read(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
+    int page = descriptor2.cursor / descriptor2.hd.blockSize;
+    int offset = descriptor2.cursor % descriptor2.hd.blockSize;
+
+    //fixed size file frame# = page#
+    //frame = map[page]
+
+    //dataoffset = offset blocks * block size?
+    int dataOffset = (descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize);
+    int pos =  dataOffset = + page * descriptor2.hd.blockSize + offset;
+
+    seek(descriptor2, pos);
+    if (read(descriptor2.fd, buf, nBytes) < 0)
+            cout << "ERROR"<< endl;
 }
 
 //https://stackoverflow.com/questions/32717269/how-to-read-an-integer-and-a-char-with-read-function-in-c
