@@ -13,6 +13,7 @@ using namespace std;
 
 //details on pack code here https://gcc.gnu.org/onlinedocs/gcc/Structure-Layout-Pragmas.html
 // __operator__ ((packed))
+//#pragma pack(pop)
 
 struct __attribute__((packed)) headerDescriptor {
     char preheader[64];
@@ -41,25 +42,21 @@ struct __attribute__((packed)) headerDescriptor {
     char Parent[16];
     //read garbage until next MB
 };
-//#pragma pack(pop)
 
-//#pragma pack(push, 1)
 struct secondDescriptor {
     headerDescriptor hd;
     int fd;
     int cursor;
 };
-//#pragma pack(pop)
 
 
 //open Takes file name, returns pointer to second struct
 void openFile(char filename[], secondDescriptor &descriptor2);
 void closeFile(secondDescriptor * descriptor2);
-//read
-void read(secondDescriptor &descriptor2, int nBytes, char *buf[]);
 //two assumptions - fixed size files, never read more than 4kb
-//write
-//seek
+void read(secondDescriptor &descriptor2, int nBytes, char *buf[]);
+void write(secondDescriptor &descriptor2, int nBytes, char *buf[]);
+
 void seek(secondDescriptor &descriptor2, int anchor);
 
 int main(int argc, char *argv[])
@@ -92,6 +89,8 @@ int main(int argc, char *argv[])
     cout << "Disk size: " << descriptor2.hd.diskSize << endl;
     cout << "Block size: " << descriptor2.hd.blockSize << endl;
     cout << "Sector size: " << descriptor2.hd.sectorSize << endl;
+    cout << "Num of Blocks in HDD: " << descriptor2.hd.numOfBlocksInHDD << endl;
+    cout << "Num of Blocks Allocated: " << descriptor2.hd.numOfBlocksAllocated << endl;
     //closeFile(descriptor2);
     return 0;
 }
@@ -135,17 +134,20 @@ void closeFile(secondDescriptor * descriptor2) {
 void seek(secondDescriptor &descriptor2, int anchor) {
     if (anchor == 0) {
         //seek start
-        descriptor2.cursor = descriptor2.hd.offsetBlocks;
+        descriptor2.cursor = descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize;
+
+        lseek(descriptor2.fd, descriptor2.cursor, SEEK_SET);
     } else if (anchor == -1) {
         //seek end
-        descriptor2.cursor = descriptor2.hd.offsetBlocks + descriptor2.hd.offsetBlocks;
+        descriptor2.cursor = descriptor2.hd.diskSize + descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize;
         //hopefully negative
         if (descriptor2.cursor > 0 && descriptor2.cursor < descriptor2.hd.diskSize) {
             //return cursor?
         }
     } else {
         //seek to offset
-        descriptor2.cursor = descriptor2.hd.offsetBlocks + anchor;
+        descriptor2.cursor = descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize + anchor;
+        lseek(descriptor2.fd, descriptor2.cursor, SEEK_SET);
     }
 }
 
@@ -158,11 +160,30 @@ void read(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
 
     //dataoffset = offset blocks * block size?
     int dataOffset = (descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize);
-    int pos =  dataOffset = + page * descriptor2.hd.blockSize + offset;
+    //dataOffset + cursor
+    int pos =  dataOffset + page * descriptor2.hd.blockSize + offset;
 
     seek(descriptor2, pos);
+
     if (read(descriptor2.fd, buf, nBytes) < 0)
-            cout << "ERROR"<< endl;
+            cout << "ERROR IN READ"<< endl;
 }
 
+void write(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
+    int page = descriptor2.cursor / descriptor2.hd.blockSize;
+    int offset = descriptor2.cursor % descriptor2.hd.blockSize;
+
+    //fixed size file frame# = page#
+    //frame = map[page]
+
+    //dataoffset = offset blocks * block size?
+    int dataOffset = (descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize);
+    int pos =  dataOffset + page * descriptor2.hd.blockSize + offset;
+
+    seek(descriptor2, pos);
+    
+    if (write(descriptor2.fd, buf, nBytes) < 0)
+        cout << "ERROR IN WRITE" << endl;
+
+}
 //https://stackoverflow.com/questions/32717269/how-to-read-an-integer-and-a-char-with-read-function-in-c
