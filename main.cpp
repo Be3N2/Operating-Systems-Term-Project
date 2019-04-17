@@ -54,19 +54,18 @@ struct secondDescriptor {
 void openFile(char filename[], secondDescriptor &descriptor2);
 void closeFile(secondDescriptor * descriptor2);
 //two assumptions - fixed size files, never read more than 4kb
-void read(secondDescriptor &descriptor2, int nBytes, char *buf[]);
-void write(secondDescriptor &descriptor2, int nBytes, char *buf[]);
+void VDIread(secondDescriptor &descriptor2, int nBytes, char *buf[]);
+void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf[]);
 
-void seek(secondDescriptor &descriptor2, int anchor);
+void VDIseek(secondDescriptor &descriptor2, int offset, int anchor);
 
 int main(int argc, char *argv[])
 {
 
-    headerDescriptor descriptor1;
     secondDescriptor descriptor2;
 
     openFile(argv[1], descriptor2);
-    cout << "SIZE OF " << sizeof(descriptor2.hd);
+
     for (int i = 0;i < sizeof(descriptor2.hd.preheader); i++) {
         cout << descriptor2.hd.preheader[i];
     }
@@ -91,7 +90,9 @@ int main(int argc, char *argv[])
     cout << "Sector size: " << descriptor2.hd.sectorSize << endl;
     cout << "Num of Blocks in HDD: " << descriptor2.hd.numOfBlocksInHDD << endl;
     cout << "Num of Blocks Allocated: " << descriptor2.hd.numOfBlocksAllocated << endl;
-    //closeFile(descriptor2);
+    
+
+    closeFile(&descriptor2);
     return 0;
 }
 
@@ -131,12 +132,13 @@ void closeFile(secondDescriptor * descriptor2) {
     delete descriptor2;
 }
 
-void seek(secondDescriptor &descriptor2, int anchor) {
+void VDIseek(secondDescriptor &descriptor2, int offset, int anchor) {
     if (anchor == 0) {
         //seek start
-        descriptor2.cursor = descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize;
 
-        lseek(descriptor2.fd, descriptor2.cursor, SEEK_SET);
+        descriptor2.cursor = offset;
+
+        //lseek(descriptor2.fd, descriptor2.cursor, SEEK_SET);
     } else if (anchor == -1) {
         //seek end
         descriptor2.cursor = descriptor2.hd.diskSize + descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize;
@@ -147,43 +149,49 @@ void seek(secondDescriptor &descriptor2, int anchor) {
     } else {
         //seek to offset
         descriptor2.cursor = descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize + anchor;
-        lseek(descriptor2.fd, descriptor2.cursor, SEEK_SET);
     }
+    //if new position is not negative and less than disk size, then set cursor to newposition
+
 }
 
-void read(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
-    int page = descriptor2.cursor / descriptor2.hd.blockSize;
-    int offset = descriptor2.cursor % descriptor2.hd.blockSize;
+void VDIread(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
 
-    //fixed size file frame# = page#
-    //frame = map[page]
+    //fetchblock is VDI seek followed by VDI Read
 
-    //dataoffset = offset blocks * block size?
-    int dataOffset = (descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize);
-    //dataOffset + cursor
-    int pos =  dataOffset + page * descriptor2.hd.blockSize + offset;
+    //someone else to do VDIseek already
+    //VDIseek(descriptor2, pos);
 
-    seek(descriptor2, pos);
+    int pos =  descriptor2.hd.offsetData + cursor;
+
+    //lseek to offsetData + cursor 
+    //use cursor and lseek
+    lseek(descriptor2.fd, pos, SEEK_SET);
 
     if (read(descriptor2.fd, buf, nBytes) < 0)
             cout << "ERROR IN READ"<< endl;
 }
 
-void write(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
-    int page = descriptor2.cursor / descriptor2.hd.blockSize;
-    int offset = descriptor2.cursor % descriptor2.hd.blockSize;
+void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
+    //VDIseek(descriptor2, pos);
+  
+    int pos = descriptor2.hd.offsetData + descriptor2.cursor;
 
-    //fixed size file frame# = page#
-    //frame = map[page]
-
-    //dataoffset = offset blocks * block size?
-    int dataOffset = (descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize);
-    int pos =  dataOffset + page * descriptor2.hd.blockSize + offset;
-
-    seek(descriptor2, pos);
+    lseek(descriptor2.fd, pos, SEEK_SET);
     
     if (write(descriptor2.fd, buf, nBytes) < 0)
         cout << "ERROR IN WRITE" << endl;
 
 }
-//https://stackoverflow.com/questions/32717269/how-to-read-an-integer-and-a-char-with-read-function-in-c
+
+//first 4 entries 16 bytes of the first sector
+//first sector number is 4 bytes and 4 byte sector count after 8 bytes
+//read table in look for partition whose type (byte 4 should be 0x83 meaning linux)
+//take first sector number and multiply by 512 and save that number
+//offsetData + that number is first byte of the file system
+//fetchblock(blockNumber * blockSize + NUMBER)
+
+//Next after VDI
+//fetchBlock()
+//fetchSuperBlock()
+//read in the superblock
+//partition table?
