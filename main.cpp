@@ -49,13 +49,23 @@ struct secondDescriptor {
     int cursor;
 };
 
+struct __attribute__((packed)) partitionTable { //16 byte partition table entry
+    // https://thestarman.pcministry.com/asm/mbr/PartTables.htm
+    char bootIndicator;
+    char startingCHS[3];
+    char partitionTypeDescriptor;
+    char endingCHS[3];
+    int startingSector;
+    int partitionSize;
+};
+
 
 //open Takes file name, returns pointer to second struct
 void openFile(char filename[], secondDescriptor &descriptor2);
 void closeFile(secondDescriptor * descriptor2);
 //two assumptions - fixed size files, never read more than 4kb
-void VDIread(secondDescriptor &descriptor2, int nBytes, char *buf[]);
-void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf[]);
+char* VDIread(secondDescriptor &descriptor2, int nBytes, char *buf);
+void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf);
 
 void VDIseek(secondDescriptor &descriptor2, int offset, int anchor);
 
@@ -91,6 +101,26 @@ int main(int argc, char *argv[])
     cout << "Num of Blocks in HDD: " << descriptor2.hd.numOfBlocksInHDD << endl;
     cout << "Num of Blocks Allocated: " << descriptor2.hd.numOfBlocksAllocated << endl;
     
+
+    //read in partition table into *partT
+    //partitionTable partitionT;
+    //partitionT = *partT;
+
+    char partBuffer[16];
+    
+    VDIseek(descriptor2, 446, -1); //446 from the start
+    
+    char *buffer = VDIread(descriptor2, sizeof(partBuffer), partBuffer);
+    partitionTable *partT = (partitionTable*) buffer; 
+
+    cout << "Starting Sector     " << dec << partT->startingSector << endl;
+    cout << "Partition Size     " << partT->partitionSize << endl;
+   
+    //int importantOffsetNumberThingOnTheSide = 
+    int IONTS = partT->startingSector * descriptor2.hd.sectorSize;
+    int firstByte = descriptor2.hd.offsetData + IONTS;
+    //fetchblock(blockNumber * descriptor2.hd.blockSize + IONTS)
+
 
     closeFile(&descriptor2);
     return 0;
@@ -133,35 +163,32 @@ void closeFile(secondDescriptor * descriptor2) {
 }
 
 void VDIseek(secondDescriptor &descriptor2, int offset, int anchor) {
-    if (anchor == 0) {
-        //seek start
-
-        descriptor2.cursor = offset;
-
-        //lseek(descriptor2.fd, descriptor2.cursor, SEEK_SET);
-    } else if (anchor == -1) {
-        //seek end
-        descriptor2.cursor = descriptor2.hd.diskSize + descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize;
-        //hopefully negative
-        if (descriptor2.cursor > 0 && descriptor2.cursor < descriptor2.hd.diskSize) {
-            //return cursor?
-        }
+    
+    int newPosition = 0;
+    if (anchor == -1) {// start
+        newPosition = offset;
+    } else if (anchor == 0) {//current
+        newPosition = descriptor2.cursor + offset;
+    } else if (anchor == 1) {//end
+        newPosition = descriptor2.hd.diskSize + offset;
     } else {
-        //seek to offset
-        descriptor2.cursor = descriptor2.hd.offsetBlocks * descriptor2.hd.blockSize + anchor;
+        newPosition = descriptor2.cursor;
     }
-    //if new position is not negative and less than disk size, then set cursor to newposition
 
+    if (newPosition >= 0 && newPosition < descriptor2.hd.diskSize) {
+        descriptor2.cursor = newPosition;
+    }
+    //return cursor?
 }
 
-void VDIread(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
+char* VDIread(secondDescriptor &descriptor2, int nBytes, char *buf) {
 
     //fetchblock is VDI seek followed by VDI Read
 
     //someone else to do VDIseek already
     //VDIseek(descriptor2, pos);
 
-    int pos =  descriptor2.hd.offsetData + cursor;
+    int pos = descriptor2.hd.offsetData + descriptor2.cursor;
 
     //lseek to offsetData + cursor 
     //use cursor and lseek
@@ -169,9 +196,11 @@ void VDIread(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
 
     if (read(descriptor2.fd, buf, nBytes) < 0)
             cout << "ERROR IN READ"<< endl;
+
+    return buf;
 }
 
-void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf[]) {
+void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf) {
     //VDIseek(descriptor2, pos);
   
     int pos = descriptor2.hd.offsetData + descriptor2.cursor;
