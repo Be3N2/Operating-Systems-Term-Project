@@ -11,79 +11,7 @@
 #include <iostream>
 using namespace std;
 
-//details on pack code here https://gcc.gnu.org/onlinedocs/gcc/Structure-Layout-Pragmas.html
-// __operator__ ((packed))
-//#pragma pack(pop)
-
-struct __attribute__((packed)) headerDescriptor {
-    char preheader[64];
-    char imageSignature[4];
-    float versionNum;
-    unsigned int sizeOfHeader;
-    unsigned int imageType;
-    int imageFlags;
-    char imageDescription[256];//96-336
-    int offsetBlocks;
-    int offsetData;
-    int numOfCylinders;
-    int numOfHeads;
-    int numOfSectors;
-    int sectorSize; //2 ^ 9
-    //4 char unused
-    int unused;
-    long long int diskSize; // 2 ^ 27
-    unsigned int blockSize; // 2 ^ 20 1MB
-    int blockExtraData;
-    unsigned int numOfBlocksInHDD;
-    unsigned int numOfBlocksAllocated;
-    char UUID[16];
-    char UUIDLastSnap[16];
-    char UUIDLink[16];
-    char Parent[16];
-    //read garbage until next MB
-};
-
-struct secondDescriptor {
-    headerDescriptor hd;
-    int fd;
-    int cursor;
-};
-
-struct __attribute__((packed)) partitionTable { //16 byte partition table entry
-    // https://thestarman.pcministry.com/asm/mbr/PartTables.htm
-    char bootIndicator;
-    char startingCHS[3];
-    char partitionTypeDescriptor;
-    char endingCHS[3];
-    int startingSector;
-    int partitionSize;
-};
-
-struct __attribute__((packed)) superBlock {
-    unsigned int inodesCount;
-    unsigned int blocksCount;
-    unsigned int reservedBlockCount;
-    unsigned int freeBlocks;
-    unsigned int freeInodesCount;
-    unsigned int firstDataBlock;
-    unsigned int blockSize;
-    unsigned int fragmentSize;
-    unsigned int numOfBlocksPerGroup;
-    unsigned int numOfFragmentsPerGroup;
-    unsigned int numOfInodesPerGroup;
-    unsigned int mountTime;
-    unsigned int writeTime;
-};
-
-struct __attribute__((packed)) groupDesc {
-    char blockBitmap[4];
-    char inodeBitmap[4];
-    unsigned int inodeTable;
-    unsigned short int freeBlocksCount;
-    unsigned short int usedDirsCount;
-    unsigned short int pad;
-    unsigned int reserved[3];
-};
+#include "structs.h"
 
 //open Takes file name, returns pointer to second struct
 void openFile(char filename[], secondDescriptor &descriptor2);
@@ -123,9 +51,6 @@ int main(int argc, char *argv[])
     }
     cout << endl << "Offset blocks: " << descriptor2.hd.offsetBlocks << endl;
     cout << "offset Data: " << descriptor2.hd.offsetData << endl;
-    cout << "num of cylinders: " << descriptor2.hd.numOfCylinders << endl;
-    cout << "num of heads: " << descriptor2.hd.numOfHeads << endl;
-    cout << "num of sectors: " << descriptor2.hd.numOfSectors << endl;
     cout << "Disk size: " << descriptor2.hd.diskSize << endl;
     cout << "Block size: " << descriptor2.hd.blockSize << endl;
     cout << "Sector size: " << descriptor2.hd.sectorSize << endl;
@@ -276,3 +201,6 @@ void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes,
 //take first sector number and multiply by 512 and save that number
 //offsetData + that number is first byte of the file system
 //fetchblock(blockNumber * blockSize + NUMBER)
+
+//blocks will only be used for one thing
+//if a block has inodes mark it as used
