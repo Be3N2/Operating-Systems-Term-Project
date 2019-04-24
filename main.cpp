@@ -59,15 +59,25 @@ struct __attribute__((packed)) partitionTable { //16 byte partition table entry
     int partitionSize;
 };
 
+struct __attribute__((packed)) superBlock {
+    unsigned int inodes_count;
+    unsigned int blocks_count;
+};
 
 //open Takes file name, returns pointer to second struct
 void openFile(char filename[], secondDescriptor &descriptor2);
 void closeFile(secondDescriptor * descriptor2);
 //two assumptions - fixed size files, never read more than 4kb
-char* VDIread(secondDescriptor &descriptor2, int nBytes, char *buf);
+void VDIread(secondDescriptor &descriptor2, int nBytes, char *buf);
 void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf);
 
 void VDIseek(secondDescriptor &descriptor2, int offset, int anchor);
+
+//takes a block number returns pointer to the data
+void fetchBlock(int blockNum, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf);
+
+void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf); 
+
 
 int main(int argc, char *argv[])
 {
@@ -110,8 +120,8 @@ int main(int argc, char *argv[])
     
     VDIseek(descriptor2, 446, -1); //446 from the start
     
-    char *buffer = VDIread(descriptor2, sizeof(partBuffer), partBuffer);
-    partitionTable *partT = (partitionTable*) buffer; 
+    VDIread(descriptor2, sizeof(partBuffer), partBuffer);
+    partitionTable *partT = (partitionTable*) partBuffer; 
 
     cout << "Starting Sector     " << dec << partT->startingSector << endl;
     cout << "Partition Size     " << partT->partitionSize << endl;
@@ -121,6 +131,15 @@ int main(int argc, char *argv[])
     int firstByte = descriptor2.hd.offsetData + IONTS;
     //fetchblock(blockNumber * descriptor2.hd.blockSize + IONTS)
 
+
+    //fetchblock
+    char superBuffer[1024];
+
+    fetchSuperBlock(descriptor2, IONTS, 1024, superBuffer);
+    superBlock *firstSuper = (superBlock*) superBuffer;
+
+    cout << "Inodes count   " << firstSuper->inodes_count << endl;
+    cout << "blocks count   " << firstSuper->blocks_count << endl;
 
     closeFile(&descriptor2);
     return 0;
@@ -181,7 +200,7 @@ void VDIseek(secondDescriptor &descriptor2, int offset, int anchor) {
     //return cursor?
 }
 
-char* VDIread(secondDescriptor &descriptor2, int nBytes, char *buf) {
+void VDIread(secondDescriptor &descriptor2, int nBytes, char *buf) {
 
     //fetchblock is VDI seek followed by VDI Read
 
@@ -197,8 +216,9 @@ char* VDIread(secondDescriptor &descriptor2, int nBytes, char *buf) {
     if (read(descriptor2.fd, buf, nBytes) < 0)
             cout << "ERROR IN READ"<< endl;
 
-    return buf;
+    //return buf;
 }
+
 
 void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf) {
     //VDIseek(descriptor2, pos);
@@ -212,6 +232,19 @@ void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf) {
 
 }
 
+void fetchBlock(int blockNum, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
+    VDIseek(descriptor2,blockNum * descriptor2.hd.blockSize + offsetIONTS, -1);
+    
+    VDIread(descriptor2, nBytes, buf);
+}
+
+//always 1024 bytes into the file system
+void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
+    VDIseek(descriptor2,1024 + offsetIONTS, -1);
+    
+    VDIread(descriptor2, nBytes, buf);
+}
+
 //first 4 entries 16 bytes of the first sector
 //first sector number is 4 bytes and 4 byte sector count after 8 bytes
 //read table in look for partition whose type (byte 4 should be 0x83 meaning linux)
@@ -223,4 +256,3 @@ void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf) {
 //fetchBlock()
 //fetchSuperBlock()
 //read in the superblock
-//partition table?
