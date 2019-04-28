@@ -83,6 +83,7 @@ int main(int argc, char *argv[])
 
     fetchSuperBlock(descriptor2, IONTS, 1024, superBuffer);
     superBlock *firstSuper = (superBlock*) superBuffer;
+    firstSuper->blockSize = 1024 << firstSuper->blockSize;
 
     cout << "Inodes count   " << firstSuper->inodesCount << endl;
     cout << "blocks count   " << firstSuper->blocksCount << endl;
@@ -90,6 +91,27 @@ int main(int argc, char *argv[])
     cout << "block size  " << firstSuper->blockSize << endl;
     cout << "num of blocks per group   " << firstSuper->numOfBlocksPerGroup << endl;
     cout << "num of inodes per group   " << firstSuper->numOfInodesPerGroup << endl;
+
+    int numOfGroups = 1 + ((firstSuper->blocksCount - 1) / firstSuper->numOfBlocksPerGroup);
+    cout << "num of Groups   " << numOfGroups << endl;
+    
+    int groupDescBufferSize = numOfGroups * sizeof(groupDesc); 
+    cout << "Size of Descriptor   " << groupDescBufferSize << endl;
+    
+    char groupDescBuffer[groupDescBufferSize];
+    VDIseek(descriptor2,1024 + firstSuper->blockSize, -1);
+    VDIread(descriptor2, groupDescBufferSize, groupDescBuffer);
+
+    groupDesc groupDescriptors[numOfGroups]; //numOfGroups is 16
+    groupDesc *groupdesc1 = &groupDescriptors[0];
+    groupdesc1 = (groupDesc*) groupDescBuffer;
+
+    cout << endl <<  "================ Group Descriptors ================" << endl;
+    for (int i = 0; i < numOfGroups; i++) {
+        cout << "Free blocks count   " << groupDescriptors[i].freeBlocksCount << endl;
+        cout << "Free inodes count   " << groupDescriptors[i].freeInodesCount << endl;
+        cout << "Used dir count   " << groupDescriptors[i].usedDirsCount << endl;
+    }
 
     closeFile(&descriptor2);
     return 0;

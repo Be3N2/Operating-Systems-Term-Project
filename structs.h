@@ -67,6 +67,7 @@ struct __attribute__((packed)) groupDesc {
     char inodeBitmap[4];
     unsigned int inodeTable;
     unsigned short int freeBlocksCount;
+    unsigned short int freeInodesCount;
     unsigned short int usedDirsCount;
     unsigned short int pad;
     unsigned int reserved[3];
