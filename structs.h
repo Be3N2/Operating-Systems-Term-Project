@@ -72,6 +72,33 @@ struct __attribute__((packed)) groupDesc {
     unsigned short int pad;
     unsigned int reserved[3];
 };
+
+struct  inode {          //do we pack this? Didn't Kramer say we have to modify it first?
+    unsigned short int iMode;
+    unsigned short int iUID;
+    unsigned int iSize;
+    unsigned int iAtime;
+    unsigned int iCtime;
+    unsigned int iMtime;
+    unsigned int iDtime;
+    unsigned short int iGid;
+    unsigned short intiLinksCount;
+    unsigned int iBlocks;
+    unsigned int iFlags;
+    unsigned int iReserved1;
+    char iBlock[15];
+    float iGeneration;
+    char iFileACL;
+    char iDirACL;
+    unsigned int iFaddr;
+    char iFrag;
+    char iFsize;
+    unsigned short int pad;
+    unsigned short int iUIDHigh;
+    unsigned short int iGIDHigh;
+    unsigned int iReserved2;
+
+};
 //fetchInode
 //fetchBlockFromFile
 //4 directory functions opendirectory close rewind getNext
