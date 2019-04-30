@@ -27,6 +27,7 @@ void fetchBlock(int blockNum, secondDescriptor &descriptor2, int offsetIONTS, in
 
 void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf); 
 
+void fetchInode(secondDescriptor &descriptor2, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf);
 
 int main(int argc, char *argv[])
 {
@@ -100,7 +101,8 @@ int main(int argc, char *argv[])
     cout << "Size of Descriptor   " << groupDescBufferSize << endl;
     
     char groupDescBuffer[groupDescBufferSize];
-    VDIseek(descriptor2,1024 + firstSuper->blockSize, -1);
+    //VDIseek(descriptor2,1024 + firstSuper->blockSize, -1);
+    VDIseek(descriptor2, (firstSuper->firstDataBlock+1) * firstSuper->blockSize,-1);
     VDIread(descriptor2, groupDescBufferSize, groupDescBuffer);
 
     groupDesc groupDescriptors[numOfGroups]; //numOfGroups is 16
@@ -117,12 +119,23 @@ int main(int argc, char *argv[])
     for (int i = 0; i < sizeof(groupDescriptors[0].blockBitmap) * 8; i++) {
         int index = i / 8;
         unsigned int value = (int) groupDescriptors[0].blockBitmap[index];
-        cout << (value >> (i % 8)) % 2;
+        cout << (value >> 7 - (i % 8)) % 2;
     }
 
 
     cout << endl <<  "================ Inodes ================" << endl;
     cout << "Size of inode:    " << sizeof(inode) << endl;
+    
+    inode rootNode;
+    fetchInode(descriptor2, firstSuper->blockSize, 2, &groupDescriptors[0], sizeof(inode), &rootNode);
+
+    cout << "Mode:    " << rootNode.iMode << endl;
+    cout << "iUID:    " << rootNode.iUID << endl;
+    cout << "Size:    " << rootNode.iSize << endl;
+    cout << "Blocks:    " << rootNode.iBlocks << endl;
+
+
+
     closeFile(&descriptor2);
     return 0;
 }
@@ -225,6 +238,15 @@ void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes,
     VDIseek(descriptor2,1024 + offsetIONTS, -1);
     
     VDIread(descriptor2, nBytes, buf);
+}
+
+void fetchInode(secondDescriptor &descriptor2, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf) {
+    VDIseek(descriptor2, 1024 + (group->inodeTable-1)*blockSize + ((inodeNum-1)*sizeof(inode)), -1);
+    //VDIseek(descriptor2, (group->inodeTable*blockSize) + ((inodeNum-1)*sizeof(inode)), -1);
+
+    char buffer[nBytes];
+    VDIread(descriptor2, nBytes, buffer);
+    inodeBuf = (inode*) buffer;
 }
 
 //first 4 entries 16 bytes of the first sector

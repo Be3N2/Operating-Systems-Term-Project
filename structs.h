@@ -63,8 +63,8 @@ struct __attribute__((packed)) superBlock {
 };
 
 struct groupDesc {
-    char blockBitmap[4];
-    char inodeBitmap[4];
+    unsigned char blockBitmap[4];
+    unsigned char inodeBitmap[4];
     unsigned int inodeTable;
     unsigned short int freeBlocksCount;
     unsigned short int freeInodesCount;
@@ -73,7 +73,7 @@ struct groupDesc {
     unsigned int reserved[3];
 };
 
-struct  inode {          //do we pack this? Didn't Kramer say we have to modify it first?
+struct inode {          //do we pack this? Didn't Kramer say we have to modify it first?
     unsigned short int iMode;
     unsigned short int iUID;
     unsigned int iSize;
@@ -86,7 +86,7 @@ struct  inode {          //do we pack this? Didn't Kramer say we have to modify 
     unsigned int iBlocks;
     unsigned int iFlags;
     unsigned int iReserved1;
-    char iBlock[15];
+    int iBlock[15];
     float iGeneration;
     char iFileACL;
     char iDirACL;
