@@ -27,7 +27,7 @@ void fetchBlock(int blockNum, secondDescriptor &descriptor2, int offsetIONTS, in
 
 void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf); 
 
-void fetchInode(secondDescriptor &descriptor2, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf);
+void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf);
 
 int main(int argc, char *argv[])
 {
@@ -105,32 +105,51 @@ int main(int argc, char *argv[])
     cout << "Size of Descriptor   " << groupDescBufferSize << endl;
     
     char groupDescBuffer[groupDescBufferSize];
-    //VDIseek(descriptor2,1024 + firstSuper->blockSize, -1);
-    VDIseek(descriptor2, (firstSuper->firstDataBlock+1) * firstSuper->blockSize,-1);
+
+    VDIseek(descriptor2, (firstSuper->firstDataBlock+1) * firstSuper->blockSize + IONTS,-1);
     VDIread(descriptor2, groupDescBufferSize, groupDescBuffer);
 
     groupDesc groupDescriptors[numOfGroups]; //numOfGroups is 16
-    groupDesc *groupdesc1 = &groupDescriptors[0];
+    groupDesc *groupdesc1 = groupDescriptors;
     groupdesc1 = (groupDesc*) groupDescBuffer;
 
+    int totalBlocksUsed = 0;
+    int totalInodesUsed = 0;
     for (int i = 0; i < numOfGroups; i++) {
-        cout << "Free blocks count   " << groupDescriptors[i].freeBlocksCount << endl;
-        cout << "Free inodes count   " << groupDescriptors[i].freeInodesCount << endl;
-        cout << "Used dir count   " << groupDescriptors[i].usedDirsCount << endl;
+        //cout << "Free blocks count   " << groupDescriptors[i].freeBlocksCount << endl;
+        //cout << "Free inodes count   " << groupDescriptors[i].freeInodesCount << endl;
+        //cout << "Used dir count   " << groupDescriptors[i].usedDirsCount << endl;
+        cout << "Bitmap block num   " << groupdesc1->blockBitmap << endl;
+        cout << "Free Blocks Count   " << groupdesc1->freeBlocksCount << endl;
+        cout << "Free inodes count   " << groupdesc1->freeInodesCount << endl;
+        cout << "Used Dirs count   " << groupdesc1->usedDirsCount << endl;
+        totalBlocksUsed += firstSuper->numOfBlocksPerGroup - groupdesc1->freeBlocksCount;
+        totalInodesUsed += firstSuper->numOfInodesPerGroup - groupdesc1->freeInodesCount;
+        groupdesc1++;
     }
+    cout << "TOTAL BLOCKS USED:    " << totalBlocksUsed << endl;
+    cout << "TOTAL INODES USED:    " << totalInodesUsed << endl;
+    cout << "Blocks Count in SuperBlock    " << firstSuper->blocksCount << endl;
+    cout << "Blocks Used plus freeBlocks    " << firstSuper->freeBlocks + totalBlocksUsed << endl; 
 
+    /*
     for (int i = 0; i < sizeof(groupDescriptors[0].blockBitmap) * 8; i++) {
         int index = i / 8;
         unsigned int value = (int) groupDescriptors[0].blockBitmap[index];
         cout << (value >> 7 - (i % 8)) % 2;
     }
+    */
 
 
     cout << endl <<  "================ Inodes ================" << endl;
     cout << "Size of inode:    " << sizeof(inode) << endl;
-    
+    int inodesPerBlock = firstSuper->blockSize / sizeof(inode);
+    cout << "Inodes Per Block    " << inodesPerBlock << endl;
+    int blocksInItable = inodesPerBlock * firstSuper->numOfInodesPerGroup;
+    cout << "Blocks in Itable    " << blocksInItable << endl;
+
     inode rootNode;
-    fetchInode(descriptor2, firstSuper->blockSize, 2, &groupDescriptors[0], sizeof(inode), &rootNode);
+    fetchInode(descriptor2, IONTS, firstSuper->blockSize, 2, groupdesc1, sizeof(inode), &rootNode);
 
     cout << "Mode:    " << rootNode.iMode << endl;
     cout << "iUID:    " << rootNode.iUID << endl;
@@ -230,8 +249,9 @@ void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf) {
 
 }
 
-void fetchBlock(int blockNum, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
-    VDIseek(descriptor2,blockNum * descriptor2.hd.blockSize + offsetIONTS, -1);
+void fetchBlock(int blockNum, int blockSize, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
+    //VDIseek(descriptor2,blockNum * descriptor2.hd.blockSize + offsetIONTS, -1);
+    VDIseek(descriptor2,blockNum * blockSize + offsetIONTS, -1);
     
     VDIread(descriptor2, nBytes, buf);
 }
@@ -243,12 +263,16 @@ void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes,
     VDIread(descriptor2, nBytes, buf);
 }
 
-void fetchInode(secondDescriptor &descriptor2, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf) {
-    VDIseek(descriptor2, 1024 + (group->inodeTable-1)*blockSize + ((inodeNum-1)*sizeof(inode)), -1);
+void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf) {
+    //VDIseek(descriptor2,1024 + firstSuper->blockSize, -1);
+    //VDIseek(descriptor2, offsetIONTS + (group->inodeTable * blockSize) + ((inodeNum-1)*sizeof(inode)), -1);
     //VDIseek(descriptor2, (group->inodeTable*blockSize) + ((inodeNum-1)*sizeof(inode)), -1);
+    //VDIread(descriptor2, nBytes, buffer);
+
 
     char buffer[nBytes];
-    VDIread(descriptor2, nBytes, buffer);
+    groupDesc currentGroup = *(group + inodeNum);
+    fetchBlock(currentGroup.inodeTable, blockSize, descriptor2, offsetIONTS, nBytes, buffer);
     inodeBuf = (inode*) buffer;
 }
 

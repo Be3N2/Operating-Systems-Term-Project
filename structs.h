@@ -76,8 +76,8 @@ struct __attribute__((packed)) superBlock {
 };
 
 struct groupDesc {
-    unsigned char blockBitmap[4];
-    unsigned char inodeBitmap[4];
+    unsigned int blockBitmap;
+    unsigned int inodeBitmap;
     unsigned int inodeTable;
     unsigned short int freeBlocksCount;
     unsigned short int freeInodesCount;
