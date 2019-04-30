@@ -62,7 +62,7 @@ struct __attribute__((packed)) superBlock {
     unsigned int writeTime;
 };
 
-struct __attribute__((packed)) groupDesc {
+struct groupDesc {
     char blockBitmap[4];
     char inodeBitmap[4];
     unsigned int inodeTable;

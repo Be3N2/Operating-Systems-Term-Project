@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
     int firstByte = descriptor2.hd.offsetData + IONTS;
     //fetchblock(blockNumber * descriptor2.hd.blockSize + IONTS)
 
+    cout << endl <<  "================ Super Block ================" << endl;
 
     //fetchblock
     char superBuffer[1024];
@@ -88,7 +89,7 @@ int main(int argc, char *argv[])
     cout << "Inodes count   " << firstSuper->inodesCount << endl;
     cout << "blocks count   " << firstSuper->blocksCount << endl;
     cout << "free blocks   " << firstSuper->freeBlocks << endl;
-    cout << "block size  " << firstSuper->blockSize << endl;
+    cout << "block size   " << firstSuper->blockSize << endl;
     cout << "num of blocks per group   " << firstSuper->numOfBlocksPerGroup << endl;
     cout << "num of inodes per group   " << firstSuper->numOfInodesPerGroup << endl;
 
@@ -113,6 +114,15 @@ int main(int argc, char *argv[])
         cout << "Used dir count   " << groupDescriptors[i].usedDirsCount << endl;
     }
 
+    for (int i = 0; i < sizeof(groupDescriptors[0].blockBitmap) * 8; i++) {
+        int index = i / 8;
+        unsigned int value = (int) groupDescriptors[0].blockBitmap[index];
+        cout << (value >> (i % 8)) % 2;
+    }
+
+
+    cout << endl <<  "================ Inodes ================" << endl;
+    cout << "Size of inode:    " << sizeof(inode) << endl;
     closeFile(&descriptor2);
     return 0;
 }
@@ -226,3 +236,16 @@ void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes,
 
 //blocks will only be used for one thing
 //if a block has inodes mark it as used
+
+//allocate a chunk of memory one block per blocksize * numberOfBlockGroups in size
+//initialize it all to 0
+//itemNumber (subtract one if inode) / itemsperBlockGroup (both values are in super block)
+//itemNumber / itemsperBlockGroup = quotient is block group
+//remainder is where in the block group to be marked (/8 is byte %8)
+
+//fetchblockfrom file (j = 0; j * blocksize < filesize; j++) block number you get mark it
+//in fetchblock mark off block in bitmap - will take car of all the file blocks
+//theres copies of the superblock, descriptors, setofinodetables, reservedblock in inode 7 that are used
+//inodes 1-10 1 is bad block inode 1-10 are not reachable except 2 
+//for loop 1-10 and add in those to the bitmap 
+
