@@ -87,12 +87,16 @@ int main(int argc, char *argv[])
     superBlock *firstSuper = (superBlock*) superBuffer;
     firstSuper->blockSize = 1024 << firstSuper->blockSize;
 
+    cout << "size of Super Block    " << sizeof(superBlock) << endl;
     cout << "Inodes count   " << firstSuper->inodesCount << endl;
     cout << "blocks count   " << firstSuper->blocksCount << endl;
     cout << "free blocks   " << firstSuper->freeBlocks << endl;
     cout << "block size   " << firstSuper->blockSize << endl;
     cout << "num of blocks per group   " << firstSuper->numOfBlocksPerGroup << endl;
     cout << "num of inodes per group   " << firstSuper->numOfInodesPerGroup << endl;
+    
+
+    cout << endl <<  "================ Group Descriptors ================" << endl;
 
     int numOfGroups = 1 + ((firstSuper->blocksCount - 1) / firstSuper->numOfBlocksPerGroup);
     cout << "num of Groups   " << numOfGroups << endl;
@@ -109,7 +113,6 @@ int main(int argc, char *argv[])
     groupDesc *groupdesc1 = &groupDescriptors[0];
     groupdesc1 = (groupDesc*) groupDescBuffer;
 
-    cout << endl <<  "================ Group Descriptors ================" << endl;
     for (int i = 0; i < numOfGroups; i++) {
         cout << "Free blocks count   " << groupDescriptors[i].freeBlocksCount << endl;
         cout << "Free inodes count   " << groupDescriptors[i].freeInodesCount << endl;

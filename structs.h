@@ -53,13 +53,26 @@ struct __attribute__((packed)) superBlock {
     unsigned int freeBlocks;
     unsigned int freeInodesCount;
     unsigned int firstDataBlock;
-    unsigned int blockSize;
-    unsigned int fragmentSize;
+    unsigned int blockSize;//log of blockSize
+    int fragmentSize;//log of fragment size
     unsigned int numOfBlocksPerGroup;
     unsigned int numOfFragmentsPerGroup;
     unsigned int numOfInodesPerGroup;
     unsigned int mountTime;
     unsigned int writeTime;
+    unsigned short int mountCount;
+    short int maxMountCount;
+    unsigned short int magicSignature;
+    unsigned short int state;
+    unsigned short int errors;
+    unsigned short int minorRevisionLevel;
+    unsigned int timeOfLastCheck;
+    unsigned int checkInterval;
+    unsigned int creatorOS;
+    unsigned int revisionLevel;
+    unsigned short int defaultUID;
+    unsigned short int deafultGID;
+
 };
 
 struct groupDesc {
@@ -82,14 +95,14 @@ struct inode {          //do we pack this? Didn't Kramer say we have to modify i
     unsigned int iMtime;
     unsigned int iDtime;
     unsigned short int iGid;
-    unsigned short intiLinksCount;
+    unsigned short int intiLinksCount;
     unsigned int iBlocks;
     unsigned int iFlags;
     unsigned int iReserved1;
     int iBlock[15];
     float iGeneration;
-    char iFileACL;
-    char iDirACL;
+    unsigned int iFileACL;
+    unsigned int iDirACL;
     unsigned int iFaddr;
     char iFrag;
     char iFsize;
@@ -98,6 +111,14 @@ struct inode {          //do we pack this? Didn't Kramer say we have to modify i
     unsigned short int iGIDHigh;
     unsigned int iReserved2;
 
+};
+
+struct dirEntry {
+    unsigned int inodeNum;
+    unsigned short int directoryLength;
+    unsigned char nameLength;
+    unsigned char fileType;
+    char name[];//[namelength]?
 };
 //fetchInode
 //fetchBlockFromFile
