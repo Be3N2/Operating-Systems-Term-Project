@@ -110,7 +110,6 @@ struct inode {          //do we pack this? Didn't Kramer say we have to modify i
     unsigned short int iUIDHigh;
     unsigned short int iGIDHigh;
     unsigned int iReserved2;
-
 };
 
 struct dirEntry {

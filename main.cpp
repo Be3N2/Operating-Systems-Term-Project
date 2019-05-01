@@ -119,13 +119,12 @@ int main(int argc, char *argv[])
         //cout << "Free blocks count   " << groupDescriptors[i].freeBlocksCount << endl;
         //cout << "Free inodes count   " << groupDescriptors[i].freeInodesCount << endl;
         //cout << "Used dir count   " << groupDescriptors[i].usedDirsCount << endl;
-        cout << "Bitmap block num   " << groupdesc1->blockBitmap << endl;
-        cout << "Free Blocks Count   " << groupdesc1->freeBlocksCount << endl;
-        cout << "Free inodes count   " << groupdesc1->freeInodesCount << endl;
-        cout << "Used Dirs count   " << groupdesc1->usedDirsCount << endl;
-        totalBlocksUsed += firstSuper->numOfBlocksPerGroup - groupdesc1->freeBlocksCount;
-        totalInodesUsed += firstSuper->numOfInodesPerGroup - groupdesc1->freeInodesCount;
-        groupdesc1++;
+        cout << "Bitmap block num   " << (groupdesc1+i)->blockBitmap << endl;
+        cout << "Free Blocks Count   " << (groupdesc1+i)->freeBlocksCount << endl;
+        cout << "Free inodes count   " << (groupdesc1+i)->freeInodesCount << endl;
+        cout << "Used Dirs count   " << (groupdesc1+i)->usedDirsCount << endl;
+        totalBlocksUsed += firstSuper->numOfBlocksPerGroup - (groupdesc1+i)->freeBlocksCount;
+        totalInodesUsed += firstSuper->numOfInodesPerGroup - (groupdesc1+i)->freeInodesCount;
     }
     cout << "TOTAL BLOCKS USED:    " << totalBlocksUsed << endl;
     cout << "TOTAL INODES USED:    " << totalInodesUsed << endl;
@@ -149,7 +148,10 @@ int main(int argc, char *argv[])
     cout << "Blocks in Itable    " << blocksInItable << endl;
 
     inode rootNode;
-    fetchInode(descriptor2, IONTS, firstSuper->blockSize, 2, groupdesc1, sizeof(inode), &rootNode);
+    //                                    inodenum
+    int groupNum = 2 / firstSuper->numOfInodesPerGroup; 
+    groupDesc *currentGroup = (groupdesc1 + groupNum);
+    fetchInode(descriptor2, IONTS, firstSuper->blockSize, 2, currentGroup, sizeof(inode), &rootNode);
 
     cout << "Mode:    " << rootNode.iMode << endl;
     cout << "iUID:    " << rootNode.iUID << endl;
@@ -264,15 +266,12 @@ void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes,
 }
 
 void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf) {
-    //VDIseek(descriptor2,1024 + firstSuper->blockSize, -1);
-    //VDIseek(descriptor2, offsetIONTS + (group->inodeTable * blockSize) + ((inodeNum-1)*sizeof(inode)), -1);
-    //VDIseek(descriptor2, (group->inodeTable*blockSize) + ((inodeNum-1)*sizeof(inode)), -1);
-    //VDIread(descriptor2, nBytes, buffer);
-
 
     char buffer[nBytes];
-    groupDesc currentGroup = *(group + inodeNum);
-    fetchBlock(currentGroup.inodeTable, blockSize, descriptor2, offsetIONTS, nBytes, buffer);
+
+    VDIseek(descriptor2, (group->inodeTable * blockSize) + (inodeNum-1) * sizeof(inode) + offsetIONTS, -1);
+    VDIread(descriptor2, nBytes, buffer);
+    
     inodeBuf = (inode*) buffer;
 }
 
