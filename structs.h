@@ -114,11 +114,20 @@ struct inode {          //do we pack this? Didn't Kramer say we have to modify i
 
 struct dirEntry {
     unsigned int inodeNum;
+    //keeps an inode struct
+    //cursor
+    //unsigned char pointer
     unsigned short int directoryLength;
     unsigned char nameLength;
     unsigned char fileType;
-    char name[];//[namelength]?
+    char name[1];//[namelength]?
 };
+//loop to handle lost and found inside the loop loop as long as cursor is less than file size, if fall out of loop return 0 for false
+//inside loop pointer to dir entry = start of array plus cursor
+//if inode is 0 continue the loop
+//if . or .. skip them
+//. .. and eleven blank empties
+
 //fetchInode
 //fetchBlockFromFile
 //4 directory functions opendirectory close rewind getNext

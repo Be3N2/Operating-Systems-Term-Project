@@ -23,7 +23,7 @@ void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf);
 void VDIseek(secondDescriptor &descriptor2, int offset, int anchor);
 
 //takes a block number returns pointer to the data
-void fetchBlock(int blockNum, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf);
+void fetchBlock(int blockNum, int blockSize, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf);
 
 void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf); 
 
@@ -116,21 +116,16 @@ int main(int argc, char *argv[])
     int totalBlocksUsed = 0;
     int totalInodesUsed = 0;
     for (int i = 0; i < numOfGroups; i++) {
-        //cout << "Free blocks count   " << groupDescriptors[i].freeBlocksCount << endl;
-        //cout << "Free inodes count   " << groupDescriptors[i].freeInodesCount << endl;
-        //cout << "Used dir count   " << groupDescriptors[i].usedDirsCount << endl;
         cout << "Bitmap block num   " << (groupdesc1+i)->blockBitmap << endl;
         cout << "Free Blocks Count   " << (groupdesc1+i)->freeBlocksCount << endl;
         cout << "Free inodes count   " << (groupdesc1+i)->freeInodesCount << endl;
+        cout << "Inode Table Num    " << (groupdesc1+i)->inodeTable << endl;
         cout << "Used Dirs count   " << (groupdesc1+i)->usedDirsCount << endl;
         totalBlocksUsed += firstSuper->numOfBlocksPerGroup - (groupdesc1+i)->freeBlocksCount;
         totalInodesUsed += firstSuper->numOfInodesPerGroup - (groupdesc1+i)->freeInodesCount;
     }
     cout << "TOTAL BLOCKS USED:    " << totalBlocksUsed << endl;
     cout << "TOTAL INODES USED:    " << totalInodesUsed << endl;
-    cout << "Blocks Count in SuperBlock    " << firstSuper->blocksCount << endl;
-    cout << "Blocks Used plus freeBlocks    " << firstSuper->freeBlocks + totalBlocksUsed << endl; 
-
     /*
     for (int i = 0; i < sizeof(groupDescriptors[0].blockBitmap) * 8; i++) {
         int index = i / 8;
@@ -147,16 +142,38 @@ int main(int argc, char *argv[])
     int blocksInItable = inodesPerBlock * firstSuper->numOfInodesPerGroup;
     cout << "Blocks in Itable    " << blocksInItable << endl;
 
-    inode rootNode;
-    //                                    inodenum
-    int groupNum = 2 / firstSuper->numOfInodesPerGroup; 
+    int startingInodeNum = 100;
+    int groupNum = (startingInodeNum-1) / firstSuper->numOfInodesPerGroup; //g = e / epg
+    int withinGroup = startingInodeNum % firstSuper->numOfInodesPerGroup;  //b = e % epg
+    cout << "Num of group      " << groupNum << endl;
     groupDesc *currentGroup = (groupdesc1 + groupNum);
-    fetchInode(descriptor2, IONTS, firstSuper->blockSize, 2, currentGroup, sizeof(inode), &rootNode);
+    cout << "Inode table      " << (groupdesc1+groupNum)->inodeTable << endl; 
+    int blockNum = withinGroup / inodesPerBlock;
+    int inodeNum = withinGroup % inodesPerBlock;
 
-    cout << "Mode:    " << rootNode.iMode << endl;
+    char buffer[firstSuper->blockSize];
+    fetchBlock((groupdesc1+groupNum)->inodeTable + blockNum, firstSuper->blockSize, descriptor2, IONTS, firstSuper->blockSize, buffer);
+    inode inodesArray[inodesPerBlock];
+    inode *inodePtr = (inode*) buffer;
+    
+    cout << "Num Within Group   " << withinGroup << endl;
+    cout << "iMode     " <<  (inodePtr + withinGroup)->iMode << endl; 
+    cout << "iUID      " << (inodePtr + withinGroup)->iUID << endl; 
+    cout << "iSize      " << (inodePtr + withinGroup)->iSize << endl; 
+    cout << "iBlock      " << (inodePtr + withinGroup)->iBlock << endl; 
+    //setBit(map[g * blockSize + e/8], e % 8) set in byte, this bit
+    //# define setBit(a, b) {(a) |= (1 << (b));}
+    //victor borgo?
+
+    //treat that as array of inodes 
+    /*
+    fetchInode(descriptor2, IONTS, firstSuper->blockSize, inodeNum, currentGroup, sizeof(inode), &rootNode);
+
+    cout << "Mode:    " << rootNode.iMode << "   " << S_ISDIR(rootNode.iMode) << endl;
     cout << "iUID:    " << rootNode.iUID << endl;
     cout << "Size:    " << rootNode.iSize << endl;
     cout << "Blocks:    " << rootNode.iBlocks << endl;
+    */
 
 
 
