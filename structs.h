@@ -86,7 +86,7 @@ struct groupDesc {
     unsigned int reserved[3];
 };
 
-struct inode {          //do we pack this? Didn't Kramer say we have to modify it first?
+struct __attribute__((packed)) inode {          //do we pack this? Didn't Kramer say we have to modify it first?
     unsigned short int iMode;
     unsigned short int iUID;
     unsigned int iSize;
@@ -112,15 +112,19 @@ struct inode {          //do we pack this? Didn't Kramer say we have to modify i
     unsigned int iReserved2;
 };
 
+//advised by Dr. Kramer to keep track of an Dir Entries block
+struct Entries {
+    inode parentNode;
+    int cursor;
+    unsigned char *ptr;//to data array?
+}
+
 struct dirEntry {
     unsigned int inodeNum;
-    //keeps an inode struct
-    //cursor
-    //unsigned char pointer
     unsigned short int directoryLength;
     unsigned char nameLength;
     unsigned char fileType;
-    char name[1];//[namelength]?
+    char name[1];
 };
 //loop to handle lost and found inside the loop loop as long as cursor is less than file size, if fall out of loop return 0 for false
 //inside loop pointer to dir entry = start of array plus cursor

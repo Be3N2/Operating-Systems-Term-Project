@@ -145,35 +145,32 @@ int main(int argc, char *argv[])
     int startingInodeNum = 100;
     int groupNum = (startingInodeNum-1) / firstSuper->numOfInodesPerGroup; //g = e / epg
     int withinGroup = startingInodeNum % firstSuper->numOfInodesPerGroup;  //b = e % epg
-    cout << "Num of group      " << groupNum << endl;
     groupDesc *currentGroup = (groupdesc1 + groupNum);
-    cout << "Inode table      " << (groupdesc1+groupNum)->inodeTable << endl; 
     int blockNum = withinGroup / inodesPerBlock;
     int inodeNum = withinGroup % inodesPerBlock;
+    cout << "Num of group      " << groupNum << endl;
+    cout << "Within Group      " << withinGroup << endl;
+    cout << "Block Number      " << blockNum << endl;
+    cout << "Inode Num         " << inodeNum << endl;
+    cout << "Inode table      " << (groupdesc1+groupNum)->inodeTable << endl; 
+    
+    
 
     char buffer[firstSuper->blockSize];
     fetchBlock((groupdesc1+groupNum)->inodeTable + blockNum, firstSuper->blockSize, descriptor2, IONTS, firstSuper->blockSize, buffer);
     inode inodesArray[inodesPerBlock];
     inode *inodePtr = (inode*) buffer;
     
-    cout << "Num Within Group   " << withinGroup << endl;
-    cout << "iMode     " <<  (inodePtr + withinGroup)->iMode << endl; 
-    cout << "iUID      " << (inodePtr + withinGroup)->iUID << endl; 
-    cout << "iSize      " << (inodePtr + withinGroup)->iSize << endl; 
-    cout << "iBlock      " << (inodePtr + withinGroup)->iBlock << endl; 
+    cout << "iMode     " << S_ISDIR((inodePtr+inodeNum)->iMode)<< " " <<  (inodePtr + inodeNum)->iMode  << endl; 
+    cout << "iUID      " << (inodePtr + inodeNum)->iUID << endl; 
+    cout << "iSize      " << (inodePtr + inodeNum)->iSize << endl; 
+    cout << "iBlock      " << (inodePtr + inodeNum)->iBlock << endl; 
     //setBit(map[g * blockSize + e/8], e % 8) set in byte, this bit
-    //# define setBit(a, b) {(a) |= (1 << (b));}
+    //# define
     //victor borgo?
 
     //treat that as array of inodes 
-    /*
-    fetchInode(descriptor2, IONTS, firstSuper->blockSize, inodeNum, currentGroup, sizeof(inode), &rootNode);
-
-    cout << "Mode:    " << rootNode.iMode << "   " << S_ISDIR(rootNode.iMode) << endl;
-    cout << "iUID:    " << rootNode.iUID << endl;
-    cout << "Size:    " << rootNode.iSize << endl;
-    cout << "Blocks:    " << rootNode.iBlocks << endl;
-    */
+   
 
 
 
@@ -270,10 +267,13 @@ void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf) {
 
 void fetchBlock(int blockNum, int blockSize, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
     //VDIseek(descriptor2,blockNum * descriptor2.hd.blockSize + offsetIONTS, -1);
-    VDIseek(descriptor2,blockNum * blockSize + offsetIONTS, -1);
+    cout << "FETCH BLOCK CALLED  Block Num   " << blockNum << "Block Size   " << blockSize << endl;
+    VDIseek(descriptor2,(blockNum * blockSize) + offsetIONTS, -1);
     
     VDIread(descriptor2, nBytes, buf);
 }
+//haven't finished this yet
+//void setBit(a, b) {(a) |= (1 << (b));}
 
 //always 1024 bytes into the file system
 void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
@@ -286,8 +286,9 @@ void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, i
 
     char buffer[nBytes];
 
-    VDIseek(descriptor2, (group->inodeTable * blockSize) + (inodeNum-1) * sizeof(inode) + offsetIONTS, -1);
-    VDIread(descriptor2, nBytes, buffer);
+    //vdi seek location way off according to Kramer, to see changes look in the bottom of the main
+    //VDIseek(descriptor2, (group->inodeTable * blockSize) + (inodeNum-1) * sizeof(inode) + offsetIONTS, -1);
+    //VDIread(descriptor2, nBytes, buffer);
     
     inodeBuf = (inode*) buffer;
 }
@@ -309,7 +310,7 @@ void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, i
 //remainder is where in the block group to be marked (/8 is byte %8)
 
 //fetchblockfrom file (j = 0; j * blocksize < filesize; j++) block number you get mark it
-//in fetchblock mark off block in bitmap - will take car of all the file blocks
+//in fetchblock mark off block in bitmap - will take care of all the file blocks
 //theres copies of the superblock, descriptors, setofinodetables, reservedblock in inode 7 that are used
 //inodes 1-10 1 is bad block inode 1-10 are not reachable except 2 
 //for loop 1-10 and add in those to the bitmap 
