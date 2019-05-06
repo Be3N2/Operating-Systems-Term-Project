@@ -116,7 +116,7 @@ struct __attribute__((packed)) inode {          //do we pack this? Didn't Kramer
 struct Entries {
     inode parentNode;
     int cursor;
-    unsigned char *ptr;//to data array?
+    char *ptr;//to data array?
 };
 
 struct dirEntry {

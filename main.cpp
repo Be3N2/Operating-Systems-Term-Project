@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "math.h"
+
 #include <iostream>
 using namespace std;
 
@@ -23,11 +25,21 @@ void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf);
 void VDIseek(secondDescriptor &descriptor2, int offset, int anchor);
 
 //takes a block number returns pointer to the data
-void fetchBlock(int blockNum, int blockSize, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf);
+void fetchBlock(int blockNum, char *buf, secondDescriptor &descriptor2);
 
-void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf); 
+void fetchSuperBlock(secondDescriptor &descriptor2, int nBytes, char *buf); 
 
-void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf);
+void fetchInode(secondDescriptor &descriptor2, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf);
+
+void fetchBlockFromFile(inode *i, int b, char *buf, secondDescriptor &descriptor2);
+
+void checkAllSupers(secondDescriptor &descriptor2, superBlock masterBlock);
+bool compareSupers(superBlock super1, superBlock super2);
+
+//GLOBAL VARIABLES :3 :)
+int IONTS;
+int blockSize;
+
 
 int main(int argc, char *argv[])
 {
@@ -74,7 +86,7 @@ int main(int argc, char *argv[])
     cout << "Partition Size     " << partT->partitionSize << endl;
    
     //int importantOffsetNumberThingOnTheSide = 
-    int IONTS = partT->startingSector * descriptor2.hd.sectorSize;
+    IONTS = partT->startingSector * descriptor2.hd.sectorSize;
     int firstByte = descriptor2.hd.offsetData + IONTS;
     //fetchblock(blockNumber * descriptor2.hd.blockSize + IONTS)
 
@@ -83,18 +95,21 @@ int main(int argc, char *argv[])
     //fetchblock
     char superBuffer[1024];
 
-    fetchSuperBlock(descriptor2, IONTS, 1024, superBuffer);
+    fetchSuperBlock(descriptor2, 1024, superBuffer);
     superBlock *firstSuper = (superBlock*) superBuffer;
-    firstSuper->blockSize = 1024 << firstSuper->blockSize;
+    blockSize = 1024 << firstSuper->blockSize;
+
+    checkAllSupers(descriptor2, *firstSuper);
+     
 
     cout << "size of Super Block    " << sizeof(superBlock) << endl;
     cout << "Inodes count   " << firstSuper->inodesCount << endl;
     cout << "blocks count   " << firstSuper->blocksCount << endl;
     cout << "free blocks   " << firstSuper->freeBlocks << endl;
-    cout << "block size   " << firstSuper->blockSize << endl;
+    cout << "block size   " << blockSize << endl;
     cout << "num of blocks per group   " << firstSuper->numOfBlocksPerGroup << endl;
     cout << "num of inodes per group   " << firstSuper->numOfInodesPerGroup << endl;
-    
+    cout << "MAGIC NUMBER     " << hex << firstSuper->magicSignature << dec << endl;
 
     cout << endl <<  "================ Group Descriptors ================" << endl;
 
@@ -106,7 +121,7 @@ int main(int argc, char *argv[])
     
     char groupDescBuffer[groupDescBufferSize];
 
-    VDIseek(descriptor2, (firstSuper->firstDataBlock+1) * firstSuper->blockSize + IONTS,-1);
+    VDIseek(descriptor2, (firstSuper->firstDataBlock+1) * blockSize + IONTS,-1);
     VDIread(descriptor2, groupDescBufferSize, groupDescBuffer);
 
     groupDesc groupDescriptors[numOfGroups]; //numOfGroups is 16
@@ -137,7 +152,7 @@ int main(int argc, char *argv[])
 
     cout << endl <<  "================ Inodes ================" << endl;
     cout << "Size of inode:    " << sizeof(inode) << endl;
-    int inodesPerBlock = firstSuper->blockSize / sizeof(inode);
+    int inodesPerBlock = blockSize / sizeof(inode);
     cout << "Inodes Per Block    " << inodesPerBlock << endl;
     int blocksInItable = inodesPerBlock * firstSuper->numOfInodesPerGroup;
     cout << "Blocks in Itable    " << blocksInItable << endl;
@@ -156,8 +171,8 @@ int main(int argc, char *argv[])
     
     
 
-    char buffer[firstSuper->blockSize];
-    fetchBlock((groupdesc1+groupNum)->inodeTable + blockNum, firstSuper->blockSize, descriptor2, IONTS, firstSuper->blockSize, buffer);
+    char buffer[blockSize];
+    fetchBlock((groupdesc1+groupNum)->inodeTable + blockNum, buffer, descriptor2);
     inode inodesArray[inodesPerBlock];
     inode *inodePtr = (inode*) buffer;
     
@@ -173,8 +188,37 @@ int main(int argc, char *argv[])
     //# define
     //victor borgo?
 
-    //treat that as array of inodes 
-   
+
+    //==========================================================
+    //Read in root directory entries
+
+    Entries rootEntries;
+    rootEntries.parentNode = *(inodePtr + inodeNum);
+    rootEntries.cursor = 0;
+    char entryBuf[blockSize];
+    rootEntries.ptr = entryBuf;
+
+    fetchBlockFromFile(&rootEntries.parentNode, 0, rootEntries.ptr, descriptor2);
+    //currentGroup->usedDirsCount
+    dirEntry temp;
+    dirEntry *ptrCur = &temp;
+    
+    bool notFinished = false;
+    int i = 24;
+    int runTimes = 0;
+    while(runTimes < currentGroup->usedDirsCount -2) {
+        ptrCur = (dirEntry*) (rootEntries.ptr + i);
+        cout <<"Inode Number:    " <<  ptrCur->inodeNum << endl;
+        cout <<"Directory Length:    " <<  ptrCur->directoryLength << endl;
+        cout <<"Name Length:    " << (int) ptrCur->nameLength << endl;
+        cout <<"File Type:    " << (int) ptrCur->fileType << endl;
+
+        cout << rootEntries.ptr + i + 8 << endl;
+
+        i += ptrCur->directoryLength;
+        runTimes++;
+    }
+    
 
 
 
@@ -269,46 +313,42 @@ void VDIwrite(secondDescriptor &descriptor2, int nBytes, char *buf) {
 
 }
 
-void fetchBlock(int blockNum, int blockSize, secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
-    //VDIseek(descriptor2,blockNum * descriptor2.hd.blockSize + offsetIONTS, -1);
+void fetchBlock(int blockNum, char *buf, secondDescriptor &descriptor2) {
     cout << "FETCH BLOCK CALLED  Block Num   " << blockNum << "Block Size   " << blockSize << endl;
-    VDIseek(descriptor2,(blockNum * blockSize) + offsetIONTS, -1);
+    VDIseek(descriptor2,(blockNum * blockSize) + IONTS, -1);
     
-    VDIread(descriptor2, nBytes, buf);
+    VDIread(descriptor2, blockSize, buf);
 }
 //haven't finished this yet
 //void setBit(a, b) {(a) |= (1 << (b));}
 
 //always 1024 bytes into the file system
-void fetchSuperBlock(secondDescriptor &descriptor2, int offsetIONTS, int nBytes, char *buf) {
-    VDIseek(descriptor2,1024 + offsetIONTS, -1);
+void fetchSuperBlock(secondDescriptor &descriptor2, int nBytes, char *buf) {
+    VDIseek(descriptor2,1024 + IONTS, -1);
     
     VDIread(descriptor2, nBytes, buf);
 }
 
-void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf) {
+void fetchInode(secondDescriptor &descriptor2, int blockSize, int inodeNum, const groupDesc *group, int nBytes, inode *inodeBuf) {
 
     char buffer[nBytes];
 
-    //vdi seek location way off according to Kramer, to see changes look in the bottom of the main
-    //VDIseek(descriptor2, (group->inodeTable * blockSize) + (inodeNum-1) * sizeof(inode) + offsetIONTS, -1);
-    //VDIread(descriptor2, nBytes, buffer);
     
     inodeBuf = (inode*) buffer;
 }
 
-void fetchBlockFromFile(inode i, int b, char *buf) {
+void fetchBlockFromFile(inode *i, int b, char *buf, secondDescriptor &descriptor2) {
     
-    int ipb;
-    
+    int ipb = 1024 / 4;//indexes per block
+    int selected = 0;
+
     if (b < 12) {
         //direct pointer
         //list = i_block?
         goto direct;
     }
     b -= 12;
-    //int ipb = blockSize / 4;//indexes per block
-    ipb = 1024 / 4;
+
     if (b < ipb) {
         //list = i_block + 12;
         goto single;
@@ -321,23 +361,57 @@ void fetchBlockFromFile(inode i, int b, char *buf) {
     b-= ipb * ipb;
     //list = i_block + 14
     triple:
-        //fetchBlock(list[b/(ipb*ipb*ipb)], tmp);
-        //List = tmp;
-        //b = b%(ipb * ipb)
+        selected = b / (ipb*ipb*ipb);
+        fetchBlock(i->iBlock[selected], buf, descriptor2);
+        i = (inode*) buf;
+        b = b%(ipb * ipb);
     doubleI:
-        //fetchBlock(list[b/(ipb*ipb)], tmp);
-        //List = tmp;
-        //b = b%(ipb * ipb)
+        selected = b/(ipb*ipb);
+        fetchBlock(i->iBlock[selected], buf, descriptor2);
+        i = (inode *) buf;
+        b = b%(ipb * ipb);
     single: 
-        //fetchBlock(list[b], tmp);
-        //List = tmp
-        //b = b % ipb
+        fetchBlock(i->iBlock[b], buf, descriptor2);
+        i = (inode*) buf;
+        b = b % ipb;
     direct:
-        //fetchBlock(list[b], tmp);
-    //this doesn't do anything just need some line after direct: before } though
-    int x = 10;
-
+        fetchBlock(i->iBlock[b], buf, descriptor2);
+    
 }
+
+void checkAllSupers(secondDescriptor &descriptor2, superBlock masterBlock) {
+
+    int start = 1;
+    char buffer[blockSize];
+    char *bufPtr = buffer;
+
+    while (pow(3, start) < masterBlock.blocksCount) {
+        
+        fetchBlock(pow(3, start), bufPtr, descriptor2);
+        superBlock *test = (superBlock*) bufPtr;
+    /*cout << "Inodes count   " << test->inodesCount << endl;
+    cout << "blocks count   " << test->blocksCount << endl;
+    cout << "free blocks   " << test->freeBlocks << endl;
+    cout << "block size   " << test << endl;
+    cout << "num of blocks per group   " << test->numOfBlocksPerGroup << endl;
+    cout << "num of inodes per group   " << test->numOfInodesPerGroup << endl;
+    cout << "MAGIC NUMBER     " << hex << test->magicSignature << dec << endl;*/
+        cout << compareSupers(masterBlock, *test);
+        start++;
+    }  
+}
+
+bool compareSupers(superBlock super1, superBlock super2) {
+    bool returnVal = true;
+    returnVal = (super1.inodesCount == super2.inodesCount);
+    returnVal = (super1.blocksCount == super2.blocksCount);
+    returnVal = (super1.reservedBlockCount == super2.reservedBlockCount);
+    returnVal = (super1.freeBlocks == super2.freeBlocks);
+    returnVal = (super1.freeInodesCount == super2.freeInodesCount);
+
+    return returnVal;
+}
+
 
 //first 4 entries 16 bytes of the first sector
 //first sector number is 4 bytes and 4 byte sector count after 8 bytes
