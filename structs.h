@@ -117,7 +117,7 @@ struct Entries {
     inode parentNode;
     int cursor;
     unsigned char *ptr;//to data array?
-}
+};
 
 struct dirEntry {
     unsigned int inodeNum;

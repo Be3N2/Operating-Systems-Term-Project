@@ -142,9 +142,9 @@ int main(int argc, char *argv[])
     int blocksInItable = inodesPerBlock * firstSuper->numOfInodesPerGroup;
     cout << "Blocks in Itable    " << blocksInItable << endl;
 
-    int startingInodeNum = 100;
+    int startingInodeNum = 2;
     int groupNum = (startingInodeNum-1) / firstSuper->numOfInodesPerGroup; //g = e / epg
-    int withinGroup = startingInodeNum % firstSuper->numOfInodesPerGroup;  //b = e % epg
+    int withinGroup = (startingInodeNum-1) % firstSuper->numOfInodesPerGroup;  //b = e % epg
     groupDesc *currentGroup = (groupdesc1 + groupNum);
     int blockNum = withinGroup / inodesPerBlock;
     int inodeNum = withinGroup % inodesPerBlock;
@@ -161,10 +161,14 @@ int main(int argc, char *argv[])
     inode inodesArray[inodesPerBlock];
     inode *inodePtr = (inode*) buffer;
     
+    if (S_ISDIR((inodePtr+inodeNum)->iMode)) cout << "IS A DIRECTORY" << endl;
     cout << "iMode     " << S_ISDIR((inodePtr+inodeNum)->iMode)<< " " <<  (inodePtr + inodeNum)->iMode  << endl; 
     cout << "iUID      " << (inodePtr + inodeNum)->iUID << endl; 
     cout << "iSize      " << (inodePtr + inodeNum)->iSize << endl; 
-    cout << "iBlock      " << (inodePtr + inodeNum)->iBlock << endl; 
+    cout << "iBlock      " << (inodePtr + inodeNum)->iBlocks << endl; 
+    for (int i = 0; i < 15; i++) {
+        cout << (inodePtr + inodeNum)->iBlock[i] << endl;
+    }
     //setBit(map[g * blockSize + e/8], e % 8) set in byte, this bit
     //# define
     //victor borgo?
@@ -291,6 +295,48 @@ void fetchInode(secondDescriptor &descriptor2, int offsetIONTS, int blockSize, i
     //VDIread(descriptor2, nBytes, buffer);
     
     inodeBuf = (inode*) buffer;
+}
+
+void fetchBlockFromFile(inode i, int b, char *buf) {
+    
+    int ipb;
+    
+    if (b < 12) {
+        //direct pointer
+        //list = i_block?
+        goto direct;
+    }
+    b -= 12;
+    //int ipb = blockSize / 4;//indexes per block
+    ipb = 1024 / 4;
+    if (b < ipb) {
+        //list = i_block + 12;
+        goto single;
+    }
+    b -= ipb;
+    if (b < ipb * ipb) {
+        //list = i_block + 13;
+        goto doubleI;
+    }
+    b-= ipb * ipb;
+    //list = i_block + 14
+    triple:
+        //fetchBlock(list[b/(ipb*ipb*ipb)], tmp);
+        //List = tmp;
+        //b = b%(ipb * ipb)
+    doubleI:
+        //fetchBlock(list[b/(ipb*ipb)], tmp);
+        //List = tmp;
+        //b = b%(ipb * ipb)
+    single: 
+        //fetchBlock(list[b], tmp);
+        //List = tmp
+        //b = b % ipb
+    direct:
+        //fetchBlock(list[b], tmp);
+    //this doesn't do anything just need some line after direct: before } though
+    int x = 10;
+
 }
 
 //first 4 entries 16 bytes of the first sector
