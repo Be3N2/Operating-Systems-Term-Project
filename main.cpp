@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
     cout << "iMode     " << S_ISDIR((inodePtr+inodeNum)->iMode)<< " " <<  (inodePtr + inodeNum)->iMode  << endl; 
     cout << "iUID      " << (inodePtr + inodeNum)->iUID << endl; 
     cout << "iSize      " << (inodePtr + inodeNum)->iSize << endl; 
-    cout << "iBlock      " << (inodePtr + inodeNum)->iBlocks << endl; 
+    cout << "iBlocks      " << (inodePtr + inodeNum)->iBlocks << endl; 
     for (int i = 0; i < 15; i++) {
         cout << (inodePtr + inodeNum)->iBlock[i] << endl;
     }
