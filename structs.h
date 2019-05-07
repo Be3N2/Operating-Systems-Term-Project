@@ -1,7 +1,3 @@
-//details on pack code here https://gcc.gnu.org/onlinedocs/gcc/Structure-Layout-Pragmas.html
-// __operator__ ((packed))
-//#pragma pack(pop)
-
 struct __attribute__((packed)) headerDescriptor {
     char preheader[64];
     char imageSignature[4];
@@ -27,7 +23,6 @@ struct __attribute__((packed)) headerDescriptor {
     char UUIDLastSnap[16];
     char UUIDLink[16];
     char Parent[16];
-    //read garbage until next MB
 };
 
 struct secondDescriptor {
@@ -36,8 +31,7 @@ struct secondDescriptor {
     int cursor;
 };
 
-struct __attribute__((packed)) partitionTable { //16 byte partition table entry
-    // https://thestarman.pcministry.com/asm/mbr/PartTables.htm
+struct __attribute__((packed)) partitionTable { 
     char bootIndicator;
     char startingCHS[3];
     char partitionTypeDescriptor;
@@ -86,7 +80,7 @@ struct groupDesc {
     unsigned int reserved[3];
 };
 
-struct __attribute__((packed)) inode {          //do we pack this? Didn't Kramer say we have to modify it first?
+struct __attribute__((packed)) inode {
     unsigned short int iMode;
     unsigned short int iUID;
     unsigned int iSize;
@@ -112,11 +106,10 @@ struct __attribute__((packed)) inode {          //do we pack this? Didn't Kramer
     unsigned int iReserved2;
 };
 
-//advised by Dr. Kramer to keep track of an Dir Entries block
 struct Entries {
     inode parentNode;
     int cursor;
-    char *ptr;//to data array?
+    char *ptr;
 };
 
 struct dirEntry {
@@ -126,18 +119,13 @@ struct dirEntry {
     unsigned char fileType;
     char name[1];
 };
+
+//More Notes:
+
 //loop to handle lost and found inside the loop loop as long as cursor is less than file size, if fall out of loop return 0 for false
 //inside loop pointer to dir entry = start of array plus cursor
 //if inode is 0 continue the loop
-//if . or .. skip them
-//. .. and eleven blank empties
 
-//fetchInode
-//fetchBlockFromFile
-//4 directory functions opendirectory close rewind getNext
-//start with inode 2 traverse everything mark as used in separate inode table
-//for every file and directory you encounter run through 
-//data block bitmaps are packed in inodes - block group size is determined by block size exactly one block for bitmap every 
 //block group isze is 8MB 8192 blocks represented
 //can't pack inodeBitmap first blockgroup has 2032 inodes, its bitmap 
 //(inode number - 1) / inodesperblockgroup) % inodesperblockgroup = blockgroup (%inodersperblockgroup gives where in blockgroup)
